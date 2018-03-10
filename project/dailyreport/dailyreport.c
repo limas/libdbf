@@ -13,7 +13,7 @@ struct context
     hdb h_item_db;
 
     char *date;
-	char date2[11];
+    char date2[11];
     char *type;
     db_pf_itor itor;
 };
@@ -46,7 +46,7 @@ static bool _dump_service(
     struct db_record st_rec_cust;
     struct db_record st_rec_item;
     struct context *pst_ctx;
-	char *s_addr;
+    char *s_item;
     bool b_ret = true;
 
     pst_ctx = (struct context *)pv_data;
@@ -93,49 +93,51 @@ static bool _dump_service(
             st_serv_item = db_field_map_data(
                     h_db,
                     pst_record->pu8_data,
-                    51);
+                    52);
 
-            st_rec_item = db_record_find(
-                    pst_ctx->h_item_db,
-                    0,
-                    0,
-                    st_serv_item.pv_data,
-                    _cmp_id,
-                    NULL);
-
-            db_field_unmap_data(h_db, &st_serv_item);
-
-            if(0 != st_rec_item.u32_data_len)
+            if(0 == st_serv_item.u32_data_len)
             {
-                st_serv_item = db_field_map_data(
-                        pst_ctx->h_item_db,
-                        st_rec_item.pu8_data,
-                        1);
-            }
-            else
-            {
+                db_field_unmap_data(h_db, &st_serv_item);
+
                 st_serv_item = db_field_map_data(
                         h_db,
                         pst_record->pu8_data,
-                        52);
+                        51);
+
+                st_rec_item = db_record_find(
+                        pst_ctx->h_item_db,
+                        0,
+                        0,
+                        st_serv_item.pv_data,
+                        _cmp_id,
+                        NULL);
+
+                db_field_unmap_data(h_db, &st_serv_item);
+
+                if (0 != st_rec_item.u32_data_len)
+                {
+                    st_serv_item = db_field_map_data(
+                            pst_ctx->h_item_db,
+                            st_rec_item.pu8_data,
+                            1);
+                }
             }
 
-			s_addr = (char *)st_deliv_addr.pv_data;
-			if (0 == strncmp(s_taichung, (char *)st_deliv_addr.pv_data, 6))
-			{
-				s_addr += 6;
-			}
+            s_item = (char *)st_serv_item.pv_data;
+            if(NULL == s_item)
+            {
+                s_item = "";
+            }
 
-            printf("'(%s)%s %s','%s'",
-                    pst_ctx->type,
+            printf("'%s','%s','%s'",
                     (char *)st_cust_name.pv_data,
-					s_addr,
-                    (char *)st_serv_item.pv_data
-                    );
+                    (char *)st_deliv_addr.pv_data,
+                    s_item
+                  );
 
             printf("\n");
 
-			db_field_unmap_data(h_db, &st_cust_id);
+            db_field_unmap_data(h_db, &st_cust_id);
             db_field_unmap_data(pst_ctx->h_item_db, &st_serv_item);
             db_field_unmap_data(h_db, &st_deliv_addr);
             db_field_unmap_data(pst_ctx->h_cust_db, &st_cust_name);
@@ -158,7 +160,6 @@ static bool _dump_deliver(
     struct db_var st_deliv_addr;
     struct db_record st_rec_cust;
     struct context *pst_ctx;
-	char *s_addr;
     bool b_ret = true;
 
     pst_ctx = (struct context *)pv_data;
@@ -202,22 +203,15 @@ static bool _dump_deliver(
                     pst_record->pu8_data,
                     11);
 
-			s_addr = (char *)st_deliv_addr.pv_data;
-			if (0 == strncmp(s_taichung, (char *)st_deliv_addr.pv_data, 6))
-			{
-				s_addr += 6;
-			}
-
-            printf("'(%s)%s %s','%s'",
-                    pst_ctx->type,
+            printf("'%s','%s','%s'",
                     (char *)st_cust_name.pv_data,
-					s_addr,
+                    (char *)st_deliv_addr.pv_data,
                     s_deliver
-                    );
+                  );
 
             printf("\n");
 
-			db_field_unmap_data(h_db, &st_cust_id);
+            db_field_unmap_data(h_db, &st_cust_id);
             db_field_unmap_data(h_db, &st_deliv_addr);
             db_field_unmap_data(pst_ctx->h_cust_db, &st_cust_name);
         }
@@ -254,21 +248,21 @@ static bool _iterator(
 
 static void _convert_date_format(char *s_src, char *s_trg)
 {
-	int year;
-	int month;
-	int day;
-	char *s_str = strdup(s_src);
+    int year;
+    int month;
+    int day;
+    char *s_str = strdup(s_src);
 
-	year = atoi(strtok(s_str, "/")) - 1911;
-	month = atoi(strtok(NULL, "/"));
-	day = atoi(strtok(NULL, "/"));
+    year = atoi(strtok(s_str, "/")) - 1911;
+    month = atoi(strtok(NULL, "/"));
+    day = atoi(strtok(NULL, "/"));
 
-	sprintf(s_trg, "%04d.%02d.%02d", year, month, day);
+    sprintf(s_trg, "%04d.%02d.%02d", year, month, day);
 }
 
 int main(int argc, char **argv)
 {
-	struct context ctx = {0};
+    struct context ctx = {0};
     char s_type_service[]={0xaa, 0x41, 0x00};
     char s_type_deliver[]={0xa5, 0x58, 0x00};
 
@@ -304,7 +298,7 @@ int main(int argc, char **argv)
     }
 
     ctx.date = argv[1];
-	_convert_date_format(argv[1], ctx.date2);
+    _convert_date_format(argv[1], ctx.date2);
 
     /* service type */
     ctx.type = s_type_service;

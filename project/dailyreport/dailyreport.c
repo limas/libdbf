@@ -43,10 +43,12 @@ static bool _dump_service(
     struct db_var st_cust_name;
     struct db_var st_deliv_addr;
     struct db_var st_serv_item;
+    struct db_var st_serv_content;
     struct db_record st_rec_cust;
     struct db_record st_rec_item;
     struct context *pst_ctx;
     char *s_item;
+    char *s_type;
     bool b_ret = true;
 
     pst_ctx = (struct context *)pv_data;
@@ -90,20 +92,21 @@ static bool _dump_service(
                     pst_record->pu8_data,
                     11);
 
-            st_serv_item = db_field_map_data(
+            st_serv_content = db_field_map_data(
                     h_db,
                     pst_record->pu8_data,
                     52);
 
-            if(0 == st_serv_item.u32_data_len)
+            st_serv_item = db_field_map_data(
+                    h_db,
+                    pst_record->pu8_data,
+                    51);
+
+            s_type = ('R' == *(char *)st_serv_item.pv_data)?("RO"):(pst_ctx->type);
+            s_item = (char *)st_serv_content.pv_data;
+
+            if(0 == st_serv_content.u32_data_len)
             {
-                db_field_unmap_data(h_db, &st_serv_item);
-
-                st_serv_item = db_field_map_data(
-                        h_db,
-                        pst_record->pu8_data,
-                        51);
-
                 st_rec_item = db_record_find(
                         pst_ctx->h_item_db,
                         0,
@@ -121,15 +124,17 @@ static bool _dump_service(
                             st_rec_item.pu8_data,
                             1);
                 }
+
+                s_item = (char *)st_serv_item.pv_data;
             }
 
-            s_item = (char *)st_serv_item.pv_data;
             if(NULL == s_item)
             {
                 s_item = "";
             }
 
-            printf("'%s','%s','%s'",
+            printf("'(%s)%s','%s','%s'",
+                    s_type,
                     (char *)st_cust_name.pv_data,
                     (char *)st_deliv_addr.pv_data,
                     s_item
@@ -139,6 +144,7 @@ static bool _dump_service(
 
             db_field_unmap_data(h_db, &st_cust_id);
             db_field_unmap_data(pst_ctx->h_item_db, &st_serv_item);
+            db_field_unmap_data(pst_ctx->h_item_db, &st_serv_content);
             db_field_unmap_data(h_db, &st_deliv_addr);
             db_field_unmap_data(pst_ctx->h_cust_db, &st_cust_name);
         }
@@ -203,7 +209,8 @@ static bool _dump_deliver(
                     pst_record->pu8_data,
                     11);
 
-            printf("'%s','%s','%s'",
+            printf("'(%s)%s','%s','%s'",
+                    pst_ctx->type,
                     (char *)st_cust_name.pv_data,
                     (char *)st_deliv_addr.pv_data,
                     s_deliver
